@@ -1,12 +1,22 @@
 import React from 'react';
 import TutorialOverlay from '../components/TutorialOverlay';
-import { Circle, Square, PieChart, BarChart3, ChevronRight, Target, Zap, Trophy, Home, Sparkles, Brain, Gamepad2 } from 'lucide-react';
+import { Circle, Square, PieChart, GraduationCap, BarChart3, ChevronRight, Target, Zap, Trophy, Home, Sparkles, Brain, Gamepad2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MainMenu = () => {
     const navigate = useNavigate();
 
     const activities = [
+        {
+            title: 'Lectures Notes',
+            description: 'Learn core concepts through interactive visual explanations',
+            icon: GraduationCap,  // You'll need to import this from lucide-react
+            gradient: 'from-indigo-500 to-violet-400',
+            bgGradient: 'from-indigo-50 to-violet-100',
+            route: '/lectures',  // You'll need to create this route/page
+            badge: 'Learn',
+            accent: 'indigo'
+        },
         {
             title: 'Coin Toss',
             description: 'Master 50/50 probability concepts through interactive coin flipping',
@@ -19,7 +29,7 @@ const MainMenu = () => {
         },
         {
             title: 'Dice Roll',
-            description: 'Explore 6-sided probability and combinations with virtual dice',
+            description: 'Explore 6-sided combinations with virtual dice',
             icon: Square,
             gradient: 'from-purple-500 to-pink-400',
             bgGradient: 'from-purple-50 to-purple-100',
@@ -107,7 +117,7 @@ const MainMenu = () => {
                     </div>
 
                     {/* Activities Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 lg:mb-12 px-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8 lg:mb-12 px-4">
                         {activities.map((activity, index) => {
                             const Icon = activity.icon;
                             return (
@@ -187,9 +197,6 @@ const MainMenu = () => {
 
                     {/* Features Grid */}
                     <div className="mt-8 lg:mt-12 px-4">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center mb-6 sm:mb-8">
-                            Why Learn With <span className="text-blue-600">ProbX</span>
-                        </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <div className="bg-white rounded-xl p-5 sm:p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
                                 <div className="flex items-center gap-3 mb-4">
