@@ -6,6 +6,7 @@ import SummaryScreen from './pages/SummaryScreen';
 import DiceRoll from './pages/DiceRoll';
 import MyProgress from './pages/MyProgress';
 import SpinnerGame from './pages/SpinnerGame';
+import Lectures from './pages/Lectures';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <Routes>
         <Route path="/" element={<WelcomeScreen />} />
         <Route path="/menu" element={<MainMenu />} />
+        <Route path="/lectures" element={<Lectures />} />
         <Route path="/coin-toss" element={<CoinToss />} />
         <Route path="/summary" element={<SummaryScreen />} />
         <Route path="/dice-roll" element={<DiceRoll />} />
