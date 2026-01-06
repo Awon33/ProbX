@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import QuestionModal from '../components/QuestionModal';
@@ -24,18 +24,104 @@ const SpinnerGame = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [questionsAskedCount, setQuestionsAskedCount] = useState(0);
 
-  const MAX_QUESTIONS = 5;
+  const MAX_QUESTIONS = 10; // Increased from 5 to better utilize 50 questions
 
-  const getNextQuestion = (targetDifficulty, excludeIds) => {
-    const available = spinnerQuestions.filter(q => q.difficulty === targetDifficulty && !excludeIds.includes(q.id));
+  // Enhanced getNextQuestion function with improved random selection
+  const getNextQuestion = (targetDifficulty, excludeIds, currentScore) => {
+    // Filter questions by difficulty and exclude used ones
+    let available = spinnerQuestions.filter(q => 
+      q.difficulty === targetDifficulty && !excludeIds.includes(q.id)
+    );
+
+    // If no questions in current difficulty, try to find similar difficulty
     if (available.length === 0) {
-      const anyAvailable = spinnerQuestions.filter(q => !excludeIds.includes(q.id));
-      if (anyAvailable.length === 0) return null;
-      return anyAvailable[0];
+      // Based on current difficulty, find alternative difficulties
+      const alternativeDifficulties = {
+        'easy': ['medium', 'hard'],
+        'medium': ['easy', 'hard'],
+        'hard': ['medium', 'easy']
+      };
+      
+      // Try alternative difficulties in order
+      for (const altDiff of alternativeDifficulties[targetDifficulty]) {
+        available = spinnerQuestions.filter(q => 
+          q.difficulty === altDiff && !excludeIds.includes(q.id)
+        );
+        if (available.length > 0) break;
+      }
     }
-    const randomIndex = Math.floor(Math.random() * available.length);
-    return available[randomIndex];
+
+    // If still no questions, allow repeats but prioritize less-used questions
+    if (available.length === 0) {
+      // Reset exclusions after all questions have been seen at least once
+      if (excludeIds.length >= spinnerQuestions.length * 0.8) { // 80% of questions used
+        available = spinnerQuestions.filter(q => q.difficulty === targetDifficulty);
+        if (available.length === 0) {
+          available = spinnerQuestions; // All questions as fallback
+        }
+        
+        // Weight questions that haven't been used recently
+        const weightedQuestions = available.map(q => {
+          let weight = 5; // Base weight
+          if (excludeIds.includes(q.id)) weight = 1; // Recently used gets lower weight
+          return { question: q, weight };
+        });
+
+        // Create weighted array
+        const weightedArray = [];
+        weightedQuestions.forEach(item => {
+          for (let i = 0; i < item.weight; i++) {
+            weightedArray.push(item.question);
+          }
+        });
+
+        const randomIndex = Math.floor(Math.random() * weightedArray.length);
+        return weightedArray[randomIndex];
+      }
+    }
+
+    // If we have available questions, select with some intelligence
+    if (available.length > 0) {
+      // Score-based weighting: If doing well, slightly favor harder questions within same difficulty
+      const weightedAvailable = available.map(q => {
+        let weight = 1;
+        
+        // Adjust weight based on performance
+        if (currentScore >= 3) {
+          // Doing well: slightly favor harder variants
+          if (q.difficulty === 'hard') weight = 1.5;
+        } else if (currentScore <= 1) {
+          // Struggling: slightly favor easier variants
+          if (q.difficulty === 'easy') weight = 1.5;
+        }
+        
+        return { question: q, weight };
+      });
+
+      // Create weighted array
+      const weightedArray = [];
+      weightedAvailable.forEach(item => {
+        for (let i = 0; i < item.weight; i++) {
+          weightedArray.push(item.question);
+        }
+      });
+
+      const randomIndex = Math.floor(Math.random() * weightedArray.length);
+      return weightedArray[randomIndex];
+    }
+
+    // Ultimate fallback: completely random question
+    const fallbackQuestion = spinnerQuestions[Math.floor(Math.random() * spinnerQuestions.length)];
+    return fallbackQuestion;
   };
+
+  // Pre-fetch first question on component mount
+  useEffect(() => {
+    if (questionsAskedCount === 0 && !currentQuestion) {
+      const firstQuestion = getNextQuestion('easy', [], score);
+      setCurrentQuestion(firstQuestion);
+    }
+  }, []);
 
   const getDifficultyColor = () => {
     switch (difficulty) {
@@ -99,7 +185,7 @@ const SpinnerGame = () => {
 
       if (newTotal % 2 === 0 && questionsAskedCount < MAX_QUESTIONS) {
         if (!currentQuestion) {
-          const firstQ = getNextQuestion('easy', []);
+          const firstQ = getNextQuestion('easy', [], score);
           setCurrentQuestion(firstQ);
         }
         setTimeout(() => setShowModal(true), 1000);
@@ -112,11 +198,13 @@ const SpinnerGame = () => {
   const handleAnswer = (isCorrect) => {
     if (isCorrect) {
       setScore(s => s + 1);
-      if (difficulty === 'easy') setDifficulty('medium');
-      else if (difficulty === 'medium') setDifficulty('hard');
+      // More gradual difficulty progression with 50 questions
+      if (difficulty === 'easy' && score >= 2) setDifficulty('medium');
+      else if (difficulty === 'medium' && score >= 4) setDifficulty('hard');
     } else {
-      if (difficulty === 'hard') setDifficulty('medium');
-      else if (difficulty === 'medium') setDifficulty('easy');
+      // More forgiving difficulty adjustment
+      if (difficulty === 'hard' && score <= 2) setDifficulty('medium');
+      else if (difficulty === 'medium' && score <= 1) setDifficulty('easy');
     }
   };
 
@@ -131,13 +219,22 @@ const SpinnerGame = () => {
     if (newCount >= MAX_QUESTIONS) {
       finishGame();
     } else {
-      const nextQ = getNextQuestion(difficulty, newUsedIds);
+      const nextQ = getNextQuestion(difficulty, newUsedIds, score);
       setCurrentQuestion(nextQ);
     }
   };
 
   const finishGame = () => {
-    navigate('/summary', { state: { game: 'spinner', score, totalQuestions: questionsAskedCount } });
+    navigate('/summary', { 
+      state: { 
+        game: 'spinner', 
+        score: score, 
+        totalQuestions: questionsAskedCount,
+        difficulty: difficulty,
+        totalSpins: stats.total,
+        distribution: stats
+      } 
+    });
   };
 
   const handleExit = () => {
@@ -154,7 +251,7 @@ const SpinnerGame = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-orange-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-blue-50 flex flex-col">
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -452,7 +549,7 @@ const SpinnerGame = () => {
                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-3 lg:p-4 rounded-xl lg:rounded-2xl">
                     <Target className="text-blue-600 mb-1 lg:mb-2" size={16} lg:size={20} />
                     <div className="text-base lg:text-lg font-bold text-gray-900">
-                      {Math.round((score / Math.max(questionsAskedCount, 1)) * 100)}%
+                      {questionsAskedCount > 0 ? Math.round((score / questionsAskedCount) * 100) : 0}%
                     </div>
                     <p className="text-xs text-gray-500">Accuracy</p>
                   </div>
