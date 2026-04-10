@@ -1,21 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import TutorialOverlay from '../components/TutorialOverlay';
-import { Circle, Square, PieChart, GraduationCap, BarChart3, ChevronRight, Target, Zap, Trophy, Home, Sparkles, Brain, Gamepad2 } from 'lucide-react';
+import { Circle, Square, PieChart, GraduationCap, BarChart3, ChevronRight, Target, Zap, Trophy, Home, Sparkles, Brain, Gamepad2, Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MainMenu = () => {
     const navigate = useNavigate();
+    const [completedLectures, setCompletedLectures] = useState([]);
+    const [lockWarning, setLockWarning] = useState(null); // { route, title, lectureId }
+
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('completedLectures')) || [];
+            setCompletedLectures(saved);
+        } catch { setCompletedLectures([]); }
+    }, []);
 
     const activities = [
         {
             title: 'Lectures Notes',
-            description: 'Learn core concepts through interactive visual explanations',
-            icon: GraduationCap,  // You'll need to import this from lucide-react
+            description: 'Learn core concepts through 4-slide interactive mini-lessons',
+            icon: GraduationCap,
             gradient: 'from-indigo-500 to-violet-400',
             bgGradient: 'from-indigo-50 to-violet-100',
-            route: '/lectures',  // You'll need to create this route/page
+            route: '/lectures',
             badge: 'Learn',
-            accent: 'indigo'
+            accent: 'indigo',
+            requiredLecture: null,
         },
         {
             title: 'Coin Toss',
@@ -25,7 +35,8 @@ const MainMenu = () => {
             bgGradient: 'from-blue-50 to-blue-100',
             route: '/coin-toss',
             badge: 'Beginner',
-            accent: 'blue'
+            accent: 'blue',
+            requiredLecture: 2,
         },
         {
             title: 'Dice Roll',
@@ -35,7 +46,8 @@ const MainMenu = () => {
             bgGradient: 'from-purple-50 to-purple-100',
             route: '/dice-roll',
             badge: 'Intermediate',
-            accent: 'purple'
+            accent: 'purple',
+            requiredLecture: 3,
         },
         {
             title: 'Spinner',
@@ -45,7 +57,8 @@ const MainMenu = () => {
             bgGradient: 'from-green-50 to-emerald-100',
             route: '/spinner',
             badge: 'Beginner',
-            accent: 'green'
+            accent: 'green',
+            requiredLecture: 4,
         },
         {
             title: 'Progress Tracker',
@@ -55,16 +68,58 @@ const MainMenu = () => {
             bgGradient: 'from-amber-50 to-orange-100',
             route: '/progress',
             badge: 'Stats',
-            accent: 'amber'
+            accent: 'amber',
+            requiredLecture: null,
         }
     ];
+
+    const isUnlocked = (activity) => {
+        if (!activity.requiredLecture) return true;
+        return completedLectures.includes(activity.requiredLecture);
+    };
+
+    const handleActivityClick = (activity) => {
+        if (!isUnlocked(activity)) {
+            setLockWarning(activity);
+            return;
+        }
+        navigate(activity.route);
+    };
 
     const handleProgress = () => {
         navigate('/progress');
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-orange-50 flex flex-col">            {/* Tutorial Overlay */}
+        <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-orange-50 flex flex-col">
+
+            {/* Lock Warning Modal */}
+            {lockWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                            <Lock size={28} className="text-amber-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Complete the Lecture First!</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            To play <strong>{lockWarning.title}</strong>, please complete <strong>Lecture {lockWarning.requiredLecture}</strong> in the Theory Guide first.
+                            This builds the knowledge you'll need!
+                        </p>
+                        <div className="space-y-3">
+                            <button onClick={() => { setLockWarning(null); navigate('/lectures'); }}
+                                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all">
+                                📖 Go to Lectures
+                            </button>
+                            <button onClick={() => { setLockWarning(null); navigate(lockWarning.route); }}
+                                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-2xl transition-all">
+                                Play Anyway (skip lecture)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tutorial Overlay */}
             <TutorialOverlay />
 
             {/* Header - Same as WelcomeScreen */}
@@ -123,10 +178,22 @@ const MainMenu = () => {
                             return (
                                 <div
                                     key={index}
-                                    onClick={() => navigate(activity.route)}
+                                    onClick={() => handleActivityClick(activity)}
                                     className="group cursor-pointer"
                                 >
-                                    <div className="relative h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-5 sm:p-6 border border-gray-200 hover:border-blue-300 hover:transform hover:-translate-y-1 overflow-hidden">
+                                    <div className={`relative h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-5 sm:p-6 border hover:transform hover:-translate-y-1 overflow-hidden ${!isUnlocked(activity) ? 'border-amber-200' : 'border-gray-200 hover:border-blue-300'}`}>
+                                        {/* Lock badge */}
+                                        {!isUnlocked(activity) && (
+                                            <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-amber-100 border border-amber-200 text-amber-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                                <Lock size={10} /> Locked
+                                            </div>
+                                        )}
+                                        {/* Completion badge */}
+                                        {isUnlocked(activity) && activity.requiredLecture && (
+                                            <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-green-100 border border-green-200 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                                <CheckCircle size={10} /> Unlocked
+                                            </div>
+                                        )}
                                         {/* Background gradient */}
                                         <div className={`absolute inset-0 bg-gradient-to-br ${activity.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 

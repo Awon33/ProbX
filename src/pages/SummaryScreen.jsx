@@ -7,7 +7,7 @@ const SummaryScreen = () => {
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const { game, score, totalQuestions } = location.state || { game: 'practice', score: 0, totalQuestions: 0 };
+    const { game, score, totalQuestions, prediction, predictionLabel, actualHeads, actual6s, actualGreen } = location.state || { game: 'practice', score: 0, totalQuestions: 0 };
     const percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
 
     // Determine Stars (Gamification)
@@ -197,7 +197,33 @@ const SummaryScreen = () => {
                                     </p>
                                 </div>
 
-
+                                {/* Prediction vs Reality */}
+                                {prediction !== null && predictionLabel && (
+                                    <div className="mt-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                                        <p className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
+                                            <span>🎯</span> Your Prediction vs Reality
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-white rounded-xl p-3 text-center border border-indigo-100">
+                                                <p className="text-xs text-gray-500 mb-1">You predicted</p>
+                                                <p className="text-base font-bold text-indigo-700">{predictionLabel}</p>
+                                            </div>
+                                            <div className="bg-white rounded-xl p-3 text-center border border-green-100">
+                                                <p className="text-xs text-gray-500 mb-1">You actually got</p>
+                                                <p className="text-base font-bold text-green-700">
+                                                    {game === 'coin' ? `${actualHeads ?? 0} heads` :
+                                                     game === 'dice' ? `${actual6s ?? 0} sixes` :
+                                                     game === 'spinner' ? `${actualGreen ?? 0} greens` : '—'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-indigo-600 mt-2 text-center">
+                                            {game === 'coin' ? 'Theoretical expectation: ~5 heads in 10 flips.' :
+                                             game === 'dice' ? 'Theoretical expectation: ~1–2 sixes in 10 rolls.' :
+                                             game === 'spinner' ? 'Theoretical expectation: ~2–3 greens in 10 spins.' : ''}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Action Buttons */}
